@@ -531,6 +531,35 @@ def check_chain_titles(books):
     return r
 
 
+def check_chain_closing(books):
+    r = Result("사슬 마무리")
+    for p, note in books.items():
+        w = rel(p)
+        chains = book_chains(note)
+        for k, c in enumerate(chains):
+            if k + 1 < len(chains):
+                end = chains[k + 1].title_idx
+            else:
+                end = next((i for i, lv, _ in note.headings if lv <= 3 and i > c.title_idx), len(note.lines))
+            closing = {}
+            for i in range(c.title_idx + 1, end):
+                line = note.lines[i]
+                for label in CLOSING_LINES:
+                    if line.lstrip().startswith(label):
+                        if line != line.lstrip():
+                            r.fail(w, i + 1, f"마무리 줄은 들여쓰기 없이 씀: {label}", "6절")
+                        closing.setdefault(label, i)
+            if not closing:
+                continue
+            first = min(closing.values())
+            after = [i for i, *_ in c.items if i > first]
+            if after:
+                r.fail(w, after[0] + 1, f"사슬 {c.number}의 마무리 두 줄({first + 1}줄) 아래에 사슬 줄이 있음. 마무리 두 줄은 사슬의 맨 끝에 둠", "6절")
+            if len(closing) == 2 and closing[CLOSING_LINES[0]] > closing[CLOSING_LINES[1]]:
+                r.fail(w, closing[CLOSING_LINES[0]] + 1, "'알게 된 나:'가 '방향 질문에 대한 지금의 답:'보다 먼저 와야 함", "5절 8번, 6절")
+    return r
+
+
 def check_question_notes(questions):
     r = Result("질문 노트")
     for p, note in questions.items():
@@ -644,6 +673,7 @@ def main():
         check_branches(books),
         check_order(books),
         check_chain_titles(books),
+        check_chain_closing(books),
         check_question_notes(questions),
         check_progress(books),
         check_links(notes),
