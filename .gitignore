@@ -1,1 +1,3 @@
 scans.local.md
+__pycache__/
+.obsidian/
